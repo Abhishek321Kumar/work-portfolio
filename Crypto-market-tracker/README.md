@@ -4,6 +4,7 @@ A high-performance, responsive React dashboard for tracking live cryptocurrency 
 
 ## Tech Stack
 
+
 - React + Vite
 - Tailwind CSS
 - CoinGecko Public API
