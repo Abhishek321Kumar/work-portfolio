@@ -1,0 +1,22 @@
+
+> crypto-price-tracker@0.0.0 dev
+> vite --host 127.0.0.1 --port 4173
+
+
+  [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m682[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+C:\Users\Abhishek_Anil\Documents\Codex\2026-04-23-final-product-build-a-high-performance\node_modules\esbuild\lib\main.js:1255
+                  reject(new Error(error2));
+                         ^
+
+Error: [31mError during dependency optimization:
+
+[39mThe service was stopped
+    at C:\Users\Abhishek_Anil\Documents\Codex\2026-04-23-final-product-build-a-high-performance\node_modules\esbuild\lib\main.js:1255:26
+    at responseCallbacks.<computed> (C:\Users\Abhishek_Anil\Documents\Codex\2026-04-23-final-product-build-a-high-performance\node_modules\esbuild\lib\main.js:884:9)
+    at Socket.afterClose (C:\Users\Abhishek_Anil\Documents\Codex\2026-04-23-final-product-build-a-high-performance\node_modules\esbuild\lib\main.js:875:28)
+    at Socket.emit (node:events:520:35)
+    at endReadableNT (node:internal/streams/readable:1701:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
