@@ -1,4 +1,4 @@
-# Pulse Crypto Dashboard
+# CryptoMania Dashboard
 
 A high-performance, responsive React dashboard for tracking live cryptocurrency market data with the CoinGecko Public API.
 
