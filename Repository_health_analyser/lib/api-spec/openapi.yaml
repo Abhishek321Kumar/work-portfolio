@@ -1,0 +1,875 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: RepoHealth API — git ingestion, code metrics, knowledge graphs, and LLM insights
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: repos
+    description: Repository management and ingestion
+  - name: metrics
+    description: Code health metrics and timeline
+  - name: graph
+    description: Knowledge graph and graph diffs
+  - name: insights
+    description: LLM-powered insights and summaries
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /repos:
+    get:
+      operationId: listRepos
+      tags: [repos]
+      summary: List all ingested repositories
+      responses:
+        "200":
+          description: List of repositories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Repo"
+    post:
+      operationId: ingestRepo
+      tags: [repos]
+      summary: Ingest a new Git repository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RepoInput"
+      responses:
+        "202":
+          description: Ingestion started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repo"
+        "400":
+          description: Invalid repository URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}:
+    get:
+      operationId: getRepo
+      tags: [repos]
+      summary: Get a repository by ID
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Repository details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repo"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteRepo
+      tags: [repos]
+      summary: Delete a repository and all its data
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted successfully
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/status:
+    get:
+      operationId: getRepoStatus
+      tags: [repos]
+      summary: Get ingestion status and progress
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ingestion status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepoStatus"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/stats:
+    get:
+      operationId: getRepoStats
+      tags: [repos]
+      summary: Get aggregate stats for the repository
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Aggregate repository statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepoStats"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/commits:
+    get:
+      operationId: listCommits
+      tags: [metrics]
+      summary: List all commits with their health metrics
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated list of commits with metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommitPage"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/commits/{sha}:
+    get:
+      operationId: getCommit
+      tags: [metrics]
+      summary: Get a single commit with detailed metrics
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sha
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Commit with detailed metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommitDetail"
+        "404":
+          description: Commit not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/timeline:
+    get:
+      operationId: getTimeline
+      tags: [metrics]
+      summary: Get health metric timeline across all commits
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Time-series health metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimelinePoint"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/hotspots:
+    get:
+      operationId: getHotspots
+      tags: [metrics]
+      summary: Get hotspot risk map — files ranked by churn × coupling
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: File hotspot risk scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HotspotFile"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/riskiest-files:
+    get:
+      operationId: getRiskiestFiles
+      tags: [metrics]
+      summary: Get top N riskiest files with composite risk scores
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Top risky files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HotspotFile"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/commits/{sha}/graph-diff:
+    get:
+      operationId: getGraphDiff
+      tags: [graph]
+      summary: Get knowledge graph diff for a commit (before vs after)
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sha
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Graph diff with added/removed/changed nodes and edges
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphDiff"
+        "404":
+          description: Commit not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/commits/{sha}/spike-explanation:
+    get:
+      operationId: getSpikeExplanation
+      tags: [insights]
+      summary: Get LLM explanation for a complexity spike at this commit
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sha
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: LLM-generated spike explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpikeExplanation"
+        "404":
+          description: Commit not found or no spike detected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/summary:
+    get:
+      operationId: getArchitecturalSummary
+      tags: [insights]
+      summary: Get LLM architectural drift summary for the repository
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: LLM-generated architectural summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchitecturalSummary"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /repos/{repoId}/narrative:
+    get:
+      operationId: getRepoNarrative
+      tags: [insights]
+      summary: Get a full demo narrative of the repository health story
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: LLM-generated narrative
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepoNarrative"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    RepoInput:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Git repository URL (GitHub HTTPS URL)
+        name:
+          type: string
+          description: Optional display name for the repo
+        maxCommits:
+          type: ["integer", "null"]
+          description: Maximum commits to process (default 500)
+      required:
+        - url
+
+    Repo:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        url:
+          type: string
+        status:
+          type: string
+          enum: [pending, ingesting, ready, error]
+        totalCommits:
+          type: ["integer", "null"]
+        processedCommits:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        errorMessage:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - url
+        - status
+        - createdAt
+        - updatedAt
+
+    RepoStatus:
+      type: object
+      properties:
+        repoId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, ingesting, ready, error]
+        totalCommits:
+          type: ["integer", "null"]
+        processedCommits:
+          type: ["integer", "null"]
+        progressPercent:
+          type: ["number", "null"]
+        currentSha:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+      required:
+        - repoId
+        - status
+
+    RepoStats:
+      type: object
+      properties:
+        repoId:
+          type: integer
+        totalCommits:
+          type: integer
+        analyzedCommits:
+          type: integer
+        avgComplexity:
+          type: number
+        maxComplexity:
+          type: number
+        avgCoupling:
+          type: number
+        totalFiles:
+          type: integer
+        spikeCount:
+          type: integer
+        mostChangedFile:
+          type: ["string", "null"]
+        dateRange:
+          type: object
+          properties:
+            start:
+              type: ["string", "null"]
+            end:
+              type: ["string", "null"]
+      required:
+        - repoId
+        - totalCommits
+        - analyzedCommits
+        - avgComplexity
+        - maxComplexity
+        - avgCoupling
+        - totalFiles
+        - spikeCount
+
+    CommitSummary:
+      type: object
+      properties:
+        sha:
+          type: string
+        shortSha:
+          type: string
+        message:
+          type: string
+        author:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        complexity:
+          type: ["number", "null"]
+        coupling:
+          type: ["number", "null"]
+        churnRisk:
+          type: ["number", "null"]
+        filesChanged:
+          type: ["integer", "null"]
+        linesAdded:
+          type: ["integer", "null"]
+        linesRemoved:
+          type: ["integer", "null"]
+        isSpikeCommit:
+          type: boolean
+      required:
+        - sha
+        - shortSha
+        - message
+        - author
+        - timestamp
+        - isSpikeCommit
+
+    CommitPage:
+      type: object
+      properties:
+        commits:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommitSummary"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+        - commits
+        - total
+        - limit
+        - offset
+
+    CommitDetail:
+      type: object
+      properties:
+        sha:
+          type: string
+        shortSha:
+          type: string
+        message:
+          type: string
+        author:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        complexity:
+          type: ["number", "null"]
+        coupling:
+          type: ["number", "null"]
+        churnRisk:
+          type: ["number", "null"]
+        filesChanged:
+          type: ["integer", "null"]
+        linesAdded:
+          type: ["integer", "null"]
+        linesRemoved:
+          type: ["integer", "null"]
+        isSpikeCommit:
+          type: boolean
+        complexityDelta:
+          type: ["number", "null"]
+        couplingDelta:
+          type: ["number", "null"]
+        changedFiles:
+          type: array
+          items:
+            type: string
+        topComplexFunctions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FunctionMetric"
+      required:
+        - sha
+        - shortSha
+        - message
+        - author
+        - timestamp
+        - isSpikeCommit
+        - changedFiles
+        - topComplexFunctions
+
+    FunctionMetric:
+      type: object
+      properties:
+        name:
+          type: string
+        file:
+          type: string
+        complexity:
+          type: number
+        lineNumber:
+          type: ["integer", "null"]
+      required:
+        - name
+        - file
+        - complexity
+
+    TimelinePoint:
+      type: object
+      properties:
+        sha:
+          type: string
+        shortSha:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        commitIndex:
+          type: integer
+        complexity:
+          type: ["number", "null"]
+        coupling:
+          type: ["number", "null"]
+        churnRisk:
+          type: ["number", "null"]
+        filesChanged:
+          type: ["integer", "null"]
+        isSpikeCommit:
+          type: boolean
+        message:
+          type: string
+        author:
+          type: string
+      required:
+        - sha
+        - shortSha
+        - timestamp
+        - commitIndex
+        - isSpikeCommit
+        - message
+        - author
+
+    HotspotFile:
+      type: object
+      properties:
+        filePath:
+          type: string
+        churnCount:
+          type: integer
+        couplingScore:
+          type: number
+        complexityScore:
+          type: number
+        riskScore:
+          type: number
+        lastChangedSha:
+          type: ["string", "null"]
+        lastChangedAt:
+          type: ["string", "null"]
+      required:
+        - filePath
+        - churnCount
+        - couplingScore
+        - complexityScore
+        - riskScore
+
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        kind:
+          type: string
+          enum: [file, function, class, module]
+        complexity:
+          type: ["number", "null"]
+        fanIn:
+          type: ["integer", "null"]
+        fanOut:
+          type: ["integer", "null"]
+        changeType:
+          type: string
+          enum: [added, removed, changed, unchanged]
+      required:
+        - id
+        - label
+        - kind
+        - changeType
+
+    GraphEdge:
+      type: object
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        kind:
+          type: string
+          enum: [calls, imports, inherits, contains]
+        changeType:
+          type: string
+          enum: [added, removed, unchanged]
+      required:
+        - source
+        - target
+        - kind
+        - changeType
+
+    GraphDiff:
+      type: object
+      properties:
+        sha:
+          type: string
+        parentSha:
+          type: ["string", "null"]
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+        addedNodes:
+          type: integer
+        removedNodes:
+          type: integer
+        changedNodes:
+          type: integer
+        addedEdges:
+          type: integer
+        removedEdges:
+          type: integer
+      required:
+        - sha
+        - nodes
+        - edges
+        - addedNodes
+        - removedNodes
+        - changedNodes
+        - addedEdges
+        - removedEdges
+
+    SpikeExplanation:
+      type: object
+      properties:
+        sha:
+          type: string
+        complexityBefore:
+          type: ["number", "null"]
+        complexityAfter:
+          type: ["number", "null"]
+        percentChange:
+          type: ["number", "null"]
+        explanation:
+          type: string
+        isIntentional:
+          type: ["boolean", "null"]
+        recommendations:
+          type: array
+          items:
+            type: string
+        cached:
+          type: boolean
+      required:
+        - sha
+        - explanation
+        - cached
+        - recommendations
+
+    ArchitecturalSummary:
+      type: object
+      properties:
+        repoId:
+          type: integer
+        summary:
+          type: string
+        keyTrends:
+          type: array
+          items:
+            type: string
+        riskModules:
+          type: array
+          items:
+            type: string
+        generatedAt:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+      required:
+        - repoId
+        - summary
+        - keyTrends
+        - riskModules
+        - generatedAt
+        - cached
+
+    RepoNarrative:
+      type: object
+      properties:
+        repoId:
+          type: integer
+        narrative:
+          type: string
+        highlights:
+          type: array
+          items:
+            type: string
+        generatedAt:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+      required:
+        - repoId
+        - narrative
+        - highlights
+        - generatedAt
+        - cached

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "RepoHealth Dashboard"
+version = "1.0.0"
+id = "artifacts/repo-health"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19574
+
+[services.development]
+run = "pnpm --filter @workspace/repo-health run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/repo-health", "run", "build" ]
+publicDir = "artifacts/repo-health/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19574"
+BASE_PATH = "/"
